@@ -18,79 +18,88 @@ class LexerError(Exception):
 class Lexer:
     def __init__(self, source: str):
         self.source = source
-        self.pos = 0          # current character index
-        self.line = 1         # current line number (for error messages)
+        self.pos = 0
+        self.line = 1
 
     # ------------------------------------------------------------------
     # Public interface (called by main.py)
     # ------------------------------------------------------------------
 
     def tokenize(self) -> list[Token]:
-        """
-        Scan the entire source and return a flat list of Tokens.
-        The last token must be Token(EOF, '', ...).
+        tokens = []
 
-        Steps to implement:
-          1. Skip whitespace (increment self.line on newlines)
-          2. Skip single-line comments if you add them (// ...)
-          3. Match multi-char tokens first (==) before single-char (=)
-          4. Match numbers (consecutive digits)
-          5. Match identifiers/keywords (letter/underscore followed by alphanum)
-          6. Match single-char operators and delimiters
-          7. Raise LexerError for anything else
-        """
-        # TODO: create an empty list to collect tokens
-        # TODO: loop while self._current() != '':
-        #           call self._skip_whitespace()
-        #           if _current() is a digit        → append self._read_number()
-        #           elif _current() is alpha/_       → append self._read_identifier_or_keyword()
-        #           elif _current() == '=' and _peek() == '=' → _advance() twice, append EQ token
-        #           elif _current() in single-char map       → _advance(), append matching token
-        #           else                                      → raise LexerError
-        # TODO: append Token(TokenType.EOF, '', self.line)
-        # TODO: return the list
-        raise NotImplementedError
+        while self._current() != '':
+            self._skip_whitespace()
+
+            ch = self._current()
+
+            if ch == '':
+                break
+            elif ch.isdigit():
+                tokens.append(self._read_number())
+            elif ch.isalpha() or ch == '_':
+                tokens.append(self._read_identifier_or_keyword())
+            elif ch == '=' and self._peek() == '=':
+                self._advance()
+                self._advance()
+                tokens.append(Token(TokenType.EQ, '==', self.line))
+            else:
+                single = {
+                    '=': TokenType.ASSIGN,
+                    '+': TokenType.PLUS,
+                    '-': TokenType.MINUS,
+                    '*': TokenType.STAR,
+                    '/': TokenType.SLASH,
+                    '<': TokenType.LT,
+                    '>': TokenType.GT,
+                    ';': TokenType.SEMICOLON,
+                    '(': TokenType.LPAREN,
+                    ')': TokenType.RPAREN,
+                    '{': TokenType.LBRACE,
+                    '}': TokenType.RBRACE,
+                }
+                if ch in single:
+                    tokens.append(Token(single[ch], ch, self.line))
+                    self._advance()
+                else:
+                    raise LexerError(f"Unexpected character '{ch}' on line {self.line}")
+
+        tokens.append(Token(TokenType.EOF, '', self.line))
+        return tokens
 
     # ------------------------------------------------------------------
-    # Helper methods (implement as needed)
+    # Helper methods
     # ------------------------------------------------------------------
 
     def _current(self) -> str:
-        """Return the character at self.pos, or '' if past end."""
-        # TODO: return self.source[self.pos] if self.pos < len(self.source) else ''
-        raise NotImplementedError
+        return self.source[self.pos] if self.pos < len(self.source) else ''
 
     def _advance(self) -> str:
-        """Consume and return the current character, advancing self.pos."""
-        # TODO: save self.source[self.pos], increment self.pos, return saved char
-        raise NotImplementedError
+        ch = self.source[self.pos]
+        self.pos += 1
+        return ch
 
     def _peek(self) -> str:
-        """Return the character after the current one without consuming it."""
-        # TODO: return self.source[self.pos + 1] if self.pos + 1 < len(self.source) else ''
-        raise NotImplementedError
+        next_pos = self.pos + 1
+        return self.source[next_pos] if next_pos < len(self.source) else ''
 
     def _skip_whitespace(self) -> None:
-        """Advance past spaces, tabs, and newlines; track self.line."""
-        # TODO: while _current() in (' ', '\t', '\r', '\n'):
-        #           if _current() == '\n': self.line += 1
-        #           self._advance()
-        raise NotImplementedError
+        while self._current() in (' ', '\t', '\r', '\n'):
+            if self._current() == '\n':
+                self.line += 1
+            self._advance()
 
     def _read_number(self) -> Token:
-        """Consume consecutive digit characters and return a NUMBER token."""
-        # TODO: record start line
-        # TODO: build up a string by calling _advance() while _current().isdigit()
-        # TODO: return Token(TokenType.NUMBER, collected_string, start_line)
-        raise NotImplementedError
+        start_line = self.line
+        text = ''
+        while self._current().isdigit():
+            text += self._advance()
+        return Token(TokenType.NUMBER, text, start_line)
 
     def _read_identifier_or_keyword(self) -> Token:
-        """
-        Consume an identifier (letter/underscore + alphanum).
-        Return a keyword TokenType if the text is in KEYWORDS, else IDENTIFIER.
-        """
-        # TODO: record start line
-        # TODO: build up a string while _current().isalnum() or _current() == '_'
-        # TODO: look up text in KEYWORDS dict → get token type (default IDENTIFIER)
-        # TODO: return Token(token_type, text, start_line)
-        raise NotImplementedError
+        start_line = self.line
+        text = ''
+        while self._current().isalnum() or self._current() == '_':
+            text += self._advance()
+        token_type = KEYWORDS.get(text, TokenType.IDENTIFIER)
+        return Token(token_type, text, start_line)
