@@ -1,16 +1,10 @@
 """
 STUDENT 3 — Symbol Table with Scope Support
-
-Responsibilities:
-  - Track every declared variable (name + type)
-  - Support nested scopes: entering a block pushes a new scope,
-    leaving it pops back to the enclosing one
-  - Raise SymbolError on duplicate declarations or undeclared use
 """
-
 
 class SymbolError(Exception):
     """Raised on undeclared variable use or duplicate declaration."""
+    pass
 
 
 class Symbol:
@@ -31,22 +25,22 @@ class SymbolTable:
     """
 
     def __init__(self):
-        self.scopes: list[dict[str, Symbol]] = [{}]   # start with global scope
+        self.scopes: list[dict[str, Symbol]] = [{}]   # global scope
 
     # ------------------------------------------------------------------
     # Scope management
     # ------------------------------------------------------------------
 
     def enter_scope(self) -> None:
-        """Push a new (empty) scope onto the stack. Call when entering { }."""
-        # TODO: append an empty dict to self.scopes
-        raise NotImplementedError
+        """Push a new (empty) scope onto the stack."""
+        self.scopes.append({})
 
     def exit_scope(self) -> None:
-        """Pop the innermost scope. Call when leaving { }."""
-        # TODO: self.scopes.pop()
-        # TODO: guard against popping the global scope (len > 1)
-        raise NotImplementedError
+        """Pop the innermost scope."""
+        if len(self.scopes) <= 1:
+            raise SymbolError("Cannot exit global scope")
+
+        self.scopes.pop()
 
     # ------------------------------------------------------------------
     # Declaration & lookup
@@ -55,24 +49,26 @@ class SymbolTable:
     def declare(self, name: str, type_name: str, line: int = 0) -> None:
         """
         Add `name` to the current (innermost) scope.
-        Raise SymbolError if `name` is already declared in this same scope.
+        Raise SymbolError if duplicate in same scope.
         """
-        # TODO: current_scope = self.scopes[-1]
-        # TODO: if name in current_scope: raise SymbolError(f"'{name}' already declared (line {line})")
-        # TODO: current_scope[name] = Symbol(name, type_name)
-        raise NotImplementedError
+        current_scope = self.scopes[-1]
+
+        if name in current_scope:
+            raise SymbolError(f"'{name}' already declared (line {line})")
+
+        current_scope[name] = Symbol(name, type_name)
 
     def lookup(self, name: str, line: int = 0) -> Symbol:
         """
         Search from innermost scope outward.
-        Return the Symbol if found.
-        Raise SymbolError if `name` is not declared in any enclosing scope.
+        Raise SymbolError if not found.
         """
-        # TODO: iterate self.scopes in reverse (reversed(self.scopes))
-        # TODO:   if name in scope: return scope[name]
-        # TODO: raise SymbolError(f"Undeclared variable '{name}' (line {line})")
-        raise NotImplementedError
+        for scope in reversed(self.scopes):
+            if name in scope:
+                return scope[name]
+
+        raise SymbolError(f"Undeclared variable '{name}' (line {line})")
 
     def lookup_type(self, name: str, line: int = 0) -> str:
-        """Convenience wrapper: return just the type string for `name`."""
+        """Return just the type string."""
         return self.lookup(name, line).type_name
