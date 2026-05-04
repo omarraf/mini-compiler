@@ -4,8 +4,8 @@
 | Role | Name |
 |------|------|
 | Student 1 — Lexer | Omar Rafiq 
-| Student 2 — Parser | _fill in_
-| Student 3 — Semantic & IR | _fill in_
+| Student 2 — Parser | Hayden Kelley
+| Student 3 — Semantic & IR | Unice Cho
 
 ---
 

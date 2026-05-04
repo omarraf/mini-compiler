@@ -44,10 +44,10 @@ class Parser:
 
     def parse(self) -> ProgramNode:
         """Entry point. Parse a full program and return the AST root."""
-        # TODO: create a ProgramNode
-        # TODO: loop calling _parse_statement() until _current().type == EOF
-        # TODO: return the ProgramNode
-        raise NotImplementedError
+        node = []
+        while self._current().type != TokenType.EOF:
+            node.append(self._parse_statement())
+        return ProgramNode(statements=node)
 
     # ------------------------------------------------------------------
     # Statement parsers (one method per grammar rule)
@@ -55,54 +55,60 @@ class Parser:
 
     def _parse_statement(self):
         """Dispatch to the correct statement parser based on current token."""
-        # TODO: if current token is INT      → return _parse_var_decl()
-        # TODO: if current token is IF       → return _parse_if()
-        # TODO: if current token is WHILE    → return _parse_while()
-        # TODO: if current token is LBRACE   → return _parse_block()
-        # TODO: if current token is IDENTIFIER → return _parse_assign()
-        # TODO: else raise ParseError with the unexpected token info
-        raise NotImplementedError
+        if self._current().type == TokenType.INT:
+            return self._parse_var_decl()
+        if self._current().type == TokenType.IF:
+            return self._parse_if()
+        if self._current().type == TokenType.WHILE:
+            return self._parse_while()
+        if self._current().type == TokenType.LBRACE:
+            return self._parse_block()
+        if self._current().type == TokenType.IDENTIFIER:
+            return self._parse_assign()
+        else: raise ParseError(f"Unexpected token {self._current().type.name} on line {self._current().line} at start of statement")
 
     def _parse_var_decl(self) -> VarDeclNode:
-        # TODO: _expect(INT) to consume 'int'
-        # TODO: _expect(IDENTIFIER) to get the variable name token
-        # TODO: _expect(SEMICOLON)
-        # TODO: return VarDeclNode(type_name='int', var_name=<name token>.value, line=...)
-        raise NotImplementedError
+        type_name = self._expect(TokenType.INT)
+        var_name = self._expect(TokenType.IDENTIFIER)
+        self._expect(TokenType.SEMICOLON)
+        return VarDeclNode(type_name=type_name.value, var_name=var_name.value, line=var_name.line) # use var_name for line number
 
     def _parse_assign(self) -> AssignNode:
-        # TODO: _expect(IDENTIFIER) to get the variable name token
-        # TODO: _expect(ASSIGN) to consume '='
-        # TODO: call _parse_expression() to get the value node
-        # TODO: _expect(SEMICOLON)
-        # TODO: return AssignNode(var_name=..., value=..., line=...)
-        raise NotImplementedError
-
+        var_name = self._expect(TokenType.IDENTIFIER)
+        self._expect(TokenType.ASSIGN) #consume the '='
+        value = self._parse_expression()
+        self._expect(TokenType.SEMICOLON)
+        return AssignNode(var_name=var_name.value, value=value, line=var_name.line)
+        
     def _parse_if(self) -> IfNode:
-        # TODO: _expect(IF)
-        # TODO: _expect(LPAREN)
-        # TODO: parse condition with _parse_expression()
-        # TODO: _expect(RPAREN)
-        # TODO: parse then_block with _parse_block()
-        # TODO: if _match(ELSE): _advance(), parse else_block with _parse_block()
-        # TODO: return IfNode(condition=..., then_block=..., else_block=...)
-        raise NotImplementedError
+        self._expect(TokenType.IF)
+        self._expect(TokenType.LPAREN)
+        condition = self._parse_expression()
+        self._expect(TokenType.RPAREN)
+        then_block = self._parse_block()
+        if(self._match(TokenType.ELSE)):
+            self._advance()
+            else_block = self._parse_block()
+        else:
+            else_block = None
+
+        return IfNode(condition=condition, then_block=then_block, else_block=else_block)
 
     def _parse_while(self) -> WhileNode:
-        # TODO: _expect(WHILE)
-        # TODO: _expect(LPAREN)
-        # TODO: parse condition with _parse_expression()
-        # TODO: _expect(RPAREN)
-        # TODO: parse body with _parse_block()
-        # TODO: return WhileNode(condition=..., body=...)
-        raise NotImplementedError
+        self._expect(TokenType.WHILE)
+        self._expect(TokenType.LPAREN)
+        condition = self._parse_expression()
+        self._expect(TokenType.RPAREN)
+        body = self._parse_block()
+        return WhileNode(condition=condition, body=body)
 
     def _parse_block(self) -> BlockNode:
-        # TODO: _expect(LBRACE)
-        # TODO: collect statements in a list, loop until current token is RBRACE or EOF
-        # TODO: _expect(RBRACE)
-        # TODO: return BlockNode(statements=[...])
-        raise NotImplementedError
+        self._expect(TokenType.LBRACE)
+        statements = []
+        while not self._match(TokenType.RBRACE, TokenType.EOF):
+            statements.append(self._parse_statement())
+        self._expect(TokenType.RBRACE)
+        return BlockNode(statements)
 
     # ------------------------------------------------------------------
     # Expression parsers (ordered by precedence, lowest → highest)
@@ -110,43 +116,53 @@ class Parser:
 
     def _parse_expression(self):
         """Lowest precedence — entry point for any expression."""
-        # TODO: just delegate to _parse_comparison() for now
-        raise NotImplementedError
+        return self._parse_comparison()
 
     def _parse_comparison(self):
-        # TODO: call _parse_addition() to get left side
-        # TODO: while _match(LT, GT, EQ):
-        #           save op = _advance().value
-        #           right = _parse_addition()
-        #           left = BinaryOpNode(op, left, right)
-        # TODO: return left
-        raise NotImplementedError
+        left = self._parse_addition()
+
+        while self._match(TokenType.LT, TokenType.GT, TokenType.EQ):
+            op = self._advance().value
+            right = self._parse_addition()
+            left = BinaryOpNode(op, left, right)
+
+        return left
+    
 
     def _parse_addition(self):
-        # TODO: call _parse_term() to get left side
-        # TODO: while _match(PLUS, MINUS):
-        #           save op = _advance().value
-        #           right = _parse_term()
-        #           left = BinaryOpNode(op, left, right)
-        # TODO: return left
-        raise NotImplementedError
+        left = self._parse_term()
+
+        while self._match(TokenType.PLUS, TokenType.MINUS):
+            op = self._advance().value
+            right = self._parse_term()
+            left = BinaryOpNode(op, left, right)
+
+        return left
 
     def _parse_term(self):
-        # TODO: call _parse_factor() to get left side
-        # TODO: while _match(STAR, SLASH):
-        #           save op = _advance().value
-        #           right = _parse_factor()
-        #           left = BinaryOpNode(op, left, right)
-        # TODO: return left
-        raise NotImplementedError
+        left = self._parse_factor()
+
+        while self._match(TokenType.STAR, TokenType.SLASH):
+            op = self._advance().value
+            right = self._parse_factor()
+            left = BinaryOpNode(op, left, right)
+
+        return left
 
     def _parse_factor(self):
         """Highest precedence: number, identifier, or parenthesized expression."""
-        # TODO: if _match(NUMBER)     → tok = _advance(), return NumberNode(int(tok.value))
-        # TODO: if _match(IDENTIFIER) → tok = _advance(), return IdentifierNode(tok.value, tok.line)
-        # TODO: if _match(LPAREN)     → _advance(), node = _parse_expression(), _expect(RPAREN), return node
-        # TODO: else raise ParseError (unexpected token)
-        raise NotImplementedError
+        if self._match(TokenType.NUMBER):
+            tok = self._advance()
+            return NumberNode(value=int(tok.value))
+        if self._match(TokenType.IDENTIFIER):
+            tok = self._advance()
+            return IdentifierNode(name=tok.value, line=tok.line)
+        if self._match(TokenType.LPAREN):
+            self._advance()
+            node = self._parse_expression()
+            self._expect(TokenType.RPAREN)
+            return node
+        else: raise ParseError(f"Unexpected token {self._current().type.name} on line {self._current().line} in expression")
 
     # ------------------------------------------------------------------
     # Token navigation helpers
@@ -168,9 +184,8 @@ class Parser:
         Consume the current token if it matches `type`, otherwise raise ParseError.
         Use this for required grammar elements (keywords, punctuation).
         """
-        # TODO: if _current().type == type: return _advance()
-        # TODO: else: raise ParseError(f"Expected {type.name}, got {_current().type.name} on line {_current().line}")
-        raise NotImplementedError
+        if self._current().type == type: return self._advance()
+        else: raise ParseError(f"Expected {type.name}, got {self._current().type.name} on line {self._current().line}")
 
     def _match(self, *types: TokenType) -> bool:
         """Return True (without consuming) if the current token is one of `types`."""
